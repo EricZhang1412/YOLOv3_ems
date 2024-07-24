@@ -1,25 +1,3 @@
-<div align="center">
-
-
-
-<!--
-<a align="center" href="https://ultralytics.com/yolov3" target="_blank">
-<img width="800" src="https://github.com/ultralytics/yolov5/releases/download/v1.0/banner-api.png"></a>
--->
-
-
-
-## <div align="center">Deep Directly-Trained Spiking Neural Networks for Object Detection [(ICCV2023)](https://openaccess.thecvf.com/content/ICCV2023/html/Su_Deep_Directly-Trained_Spiking_Neural_Networks_for_Object_Detection_ICCV_2023_paper.html)</div>
-</div>
-
-### Requirements
-
-The code has been tested with pytorch=1.10.1,py=3.8, cuda=11.3, cudnn=8.2.0_0 . The conda environment can be copied directly via <b>environment.yml</b>. Some additional dependencies can be found in the  <b>environment.txt</b>.
-
-
-<details open>
-<summary>Install</summary>
-
 ```bash
 $ git clone https://github.com/BICLab/EMS-YOLO.git
 $ pip install -r requirements.txt
