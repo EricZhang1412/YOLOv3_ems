@@ -1,0 +1,6 @@
+/runs/train/
+__pycache__
+.ipynb_checkpoints
+/wandb/*
+*.npy
+*.log

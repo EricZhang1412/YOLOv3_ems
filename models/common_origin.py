@@ -42,55 +42,6 @@ class BinaryQuantize(Function):
         grad_input = k * t * (1 - torch.pow(torch.tanh(input * t), 2)) * grad_output
         return grad_input, None, None
 
-    
-class TernaryQuantize(Function):
-    @staticmethod
-    def forward(ctx, input, k, t, thres):
-        ctx.save_for_backward(input, k, t)
-        out = (input > thres) + (input < thres)
-        return out
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        input, k, t = ctx.saved_tensors
-        grad_input = k * t * (1 - torch.pow(torch.tanh(input * t), 2)) * grad_output
-        return grad_input, None, None
-    
-# def Ternarize(tensor):
-#     output = torch.zeros(tensor.size())
-#     delta = Delta(tensor)
-#     alpha = Alpha(tensor,delta)
-#     for i in range(tensor.size()[0]):
-#         for w in tensor[i].view(1,-1):
-#             pos_one = (w > delta[i]).type(torch.FloatTensor)
-#             neg_one = -1 * (w < -delta[i]).type(torch.FloatTensor)
-#         out = torch.add(pos_one,neg_one).view(tensor.size()[1:])
-#         output[i] = torch.add(output[i],torch.mul(out,alpha[i].to(out.device)))
-#     return output
-            
-
-def Alpha(tensor,delta):  
-    absvalue = tensor.abs()  # 计算绝对值
-    # 扩展delta使其可以与absvalue进行广播   
-    # 计算布尔张量
-    truth_value = absvalue > delta
-    # 计算大于delta的元素个数
-    count = truth_value.sum(dim=(1,2,3), keepdim=True).float()    
-    # 计算绝对值之和
-    abssum = (absvalue * truth_value.float()).sum(dim=(1,2,3), keepdim=True)   
-    # 计算alpha
-    alpha = abssum / count
-    return alpha
-
-def Delta(tensor):
-    n = tensor[0].nelement()
-    # 把0.7设的小一点
-    if(len(tensor.size()) == 4):     #convolution layer
-        delta = 0.05 * tensor.norm(1,3).sum(2).sum(1).div(n)
-    elif(len(tensor.size()) == 2):   #fc layer
-        delta = 0.05 * tensor.norm(1,1).div(n)
-    return delta
-
 class Snn_Conv2d_quant(nn.Conv2d):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1,
@@ -99,17 +50,14 @@ class Snn_Conv2d_quant(nn.Conv2d):
         self.marker = marker
         self.k = torch.tensor([10]).float().cuda()
         self.t = torch.tensor([0.1]).float().cuda()
-        
     def forward(self, input):
         w = self.weight
-        w = w - w.view(w.size(0), -1).mean(-1).view(w.size(0), 1, 1, 1)
-        w = w / w.view(w.size(0), -1).std(-1).view(w.size(0), 1, 1, 1)
-        # sw = torch.pow(torch.tensor([2]*bw.size(0)).to(input.device).float(), (torch.log(bw.abs().view(bw.size(0), -1).mean(-1)) / math.log(2)).round().float()).view(bw.size(0), 1, 1, 1).detach()
-        delta =Delta(w).view(w.size(0),1,1,1)
-        sw = Alpha(w, delta).view(w.size(0),1,1,1)
-        # w = TernaryQuantize().apply(w, self.k, self.t, delta).to(input.device)
-        weight = BinaryQuantize().apply(w, self.k, self.t)
-        # weight = w * sw
+        bw = w - w.view(w.size(0), -1).mean(-1).view(w.size(0), 1, 1, 1)
+        bw = bw / bw.view(bw.size(0), -1).std(-1).view(bw.size(0), 1, 1, 1)
+        sw = torch.pow(torch.tensor([2]*bw.size(0)).to(input.device).float(), (torch.log(bw.abs().view(bw.size(0), -1).mean(-1)) / math.log(2)).round().float()).view(bw.size(0), 1, 1, 1).detach()
+        w = BinaryQuantize().apply(bw,self.k,self.t)
+        # w = BinaryQuantize().apply(w)
+        weight = w * sw
         # weight = self.weight#
         # print(self.padding[0],'=======')
         h = (input.size()[3]-self.kernel_size[0]+2*self.padding[0])//self.stride[0]+1
@@ -386,7 +334,7 @@ class DWConv(Conv):
         super().__init__(c1, c2, k, s, g=math.gcd(c1, c2), d=d, act=act)
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_channels, out_channels,kernel=1, stride=1,e=0.5):
+    def __init__(self, in_channels, out_channels,kernel=3, stride=1,e=0.5):
         super().__init__()
         c_ = int(out_channels * e) 
         
@@ -410,11 +358,11 @@ class BasicBlock_1(nn.Module):#
         # c_ = int(out_channels * e)  # hidden channels  
         c_=1024
         self.residual_function = nn.Sequential(
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(in_channels, c_, kernel_size=3, stride=stride, padding=1, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(in_channels, c_, kernel_size=3, stride=stride, padding=1, bias=False),
             batch_norm_2d(c_),
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(c_, out_channels, kernel_size=3, padding=1, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(c_, out_channels, kernel_size=3, padding=1, bias=False),
             batch_norm_2d1(out_channels),
             )
         # shortcut
@@ -423,8 +371,8 @@ class BasicBlock_1(nn.Module):#
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.MaxPool3d((1, stride, stride), stride=(1, stride, stride)),
-                mem_update_quant(act=False),
-                Snn_Conv2d_quant(in_channels, out_channels, kernel_size=1, stride=1, bias=False),
+                mem_update(act=False),
+                Snn_Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False),
                 batch_norm_2d(out_channels),
             )
    
@@ -443,11 +391,11 @@ class BasicBlock_2(nn.Module):
         if k_size==1:
             pad=0
         self.residual_function = nn.Sequential(
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(in_channels, out_channels, kernel_size=k_size, stride=stride, padding=pad, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(in_channels, out_channels, kernel_size=k_size, stride=stride, padding=pad, bias=False),
             batch_norm_2d(out_channels),
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(out_channels, out_channels, kernel_size=k_size, padding=pad, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(out_channels, out_channels, kernel_size=k_size, padding=pad, bias=False),
             batch_norm_2d1(out_channels),
             )
         self.shortcut = nn.Sequential(
@@ -456,25 +404,15 @@ class BasicBlock_2(nn.Module):
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.MaxPool3d((1, stride, stride), stride=(1, stride, stride)),
-                mem_update_quant(act=False),
-                Snn_Conv2d_quant(in_channels, out_channels, kernel_size=1, stride=1, bias=False),
+                mem_update(act=False),
+                Snn_Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False),
                 batch_norm_2d(out_channels),
             )
             
     def forward(self, x):
         return (self.residual_function(x) + self.shortcut(x))
 
-# class residualBlock_darknet(nn.Module):
-#     def __init__(self, in_channels, out_channels,k_size=3, stride=1,e=2):
-#         super().__init__()
-#         c_ = int(in_channels * e) # hidden channels
-#         self.residual_function = nn.Sequential(
-#             mem_update_quant(act=False),
-#             Snn_Conv2d_quant(in_channels, c_, kernel_size=1, stride=1, padding=0, bias=False),
-#             batch_norm_2d(c_),
-#             mem_update_quant(act=False),
-#             Snn_Conv2d_quant(c_)
-#         )
+
 class Concat_res2(nn.Module):#
     def __init__(self, in_channels, out_channels,k_size=3, stride=1,e=0.5):
         super().__init__()
@@ -484,11 +422,11 @@ class Concat_res2(nn.Module):#
         if k_size==1:
             pad=0
         self.residual_function = nn.Sequential(
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(in_channels, out_channels, kernel_size=k_size, stride=stride, padding=pad, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(in_channels, out_channels, kernel_size=k_size, stride=stride, padding=pad, bias=False),
             batch_norm_2d(out_channels),
-            mem_update_quant(act=False),
-            Snn_Conv2d_quant(out_channels, out_channels, kernel_size=k_size, padding=pad, bias=False),
+            mem_update(act=False),
+            Snn_Conv2d(out_channels, out_channels, kernel_size=k_size, padding=pad, bias=False),
             batch_norm_2d1(out_channels),
             )
         # shortcut
@@ -497,8 +435,8 @@ class Concat_res2(nn.Module):#
             
         if in_channels<out_channels:
             self.shortcut = nn.Sequential(                 
-                mem_update_quant(act=False),       
-                Snn_Conv2d_quant(in_channels, out_channels-in_channels, kernel_size=1, stride=1, bias=False),
+                mem_update(act=False),       
+                Snn_Conv2d(in_channels, out_channels-in_channels, kernel_size=1, stride=1, bias=False),
                 batch_norm_2d(out_channels-in_channels),
             )
         self.pools=nn.MaxPool3d((1, stride, stride), stride=(1, stride, stride))

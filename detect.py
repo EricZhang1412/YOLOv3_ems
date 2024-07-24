@@ -144,40 +144,41 @@ def run(weights=ROOT / 'yolov3.pt',  # model.pt path(s)
         #attention visualise
         
         # get_local.clear()
-        attention_name = "mem_update.forward"
-        fr=np.zeros(len(cache[attention_name]))
-        sz=np.zeros(len(cache[attention_name]))
-        for att_index in range(len(cache[attention_name])):
-            #att_map = cache[attention_name][att_index][:,0,:,:,:]
-            #att_map = np.mean(att_map,axis=0)
-            #att_map = np.mean(att_map,axis=0)
-            # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
-            fr[att_index]=cache[attention_name][att_index].sum()/cache[attention_name][att_index].size
-        for att_index in range(len(cache[attention_name])):
-            #att_map = cache[attention_name][att_index][:,0,:,:,:]
-            #att_map = np.mean(att_map,axis=0)
-            #att_map = np.mean(att_map,axis=0)
-            # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
-            sz[att_index]=cache[attention_name][att_index].size
-        #计算firing rate
+#         print(cache)
+#         attention_name = "mem_update.forward"
+#         fr=np.zeros(len(cache[attention_name]))
+#         sz=np.zeros(len(cache[attention_name]))
+#         for att_index in range(len(cache[attention_name])):
+#             #att_map = cache[attention_name][att_index][:,0,:,:,:]
+#             #att_map = np.mean(att_map,axis=0)
+#             #att_map = np.mean(att_map,axis=0)
+#             # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
+#             fr[att_index]=cache[attention_name][att_index].sum()/cache[attention_name][att_index].size
+#         for att_index in range(len(cache[attention_name])):
+#             #att_map = cache[attention_name][att_index][:,0,:,:,:]
+#             #att_map = np.mean(att_map,axis=0)
+#             #att_map = np.mean(att_map,axis=0)
+#             # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
+#             sz[att_index]=cache[attention_name][att_index].size
+#         #计算firing rate
 
-        FR.append(fr)
-        SZ.append(sz)
-        attention_name = "ChannelAttention.forward"
-        for att_index in range(len(cache[attention_name])):
-            att_map = cache[attention_name][att_index][0,0,:,:,:]
-            att_map = np.mean(att_map,axis=0)
-            # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
-        attention_name = "SpatialAttention.forward"
-        for att_index in range(len(cache[attention_name])):
-            att_map = cache[attention_name][att_index][0,0,0,:,:]
-            # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
-        attention_name = "CSA.forward"
-        for att_index in range(len(cache[attention_name])):
-            att_map = cache[attention_name][att_index][0,0,0,:,:]
-            # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
+#         FR.append(fr)
+#         SZ.append(sz)
+#         attention_name = "ChannelAttention.forward"
+#         for att_index in range(len(cache[attention_name])):
+#             att_map = cache[attention_name][att_index][0,0,:,:,:]
+#             att_map = np.mean(att_map,axis=0)
+#             # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
+#         attention_name = "SpatialAttention.forward"
+#         for att_index in range(len(cache[attention_name])):
+#             att_map = cache[attention_name][att_index][0,0,0,:,:]
+#             # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
+#         attention_name = "CSA.forward"
+#         for att_index in range(len(cache[attention_name])):
+#             att_map = cache[attention_name][att_index][0,0,0,:,:]
+#             # visualize_grid_to_grid(save_dir,att_index,attention_name,att_map,image)
         
-        get_local.clear()
+#         get_local.clear()
 
 
         # Process predictions
@@ -266,8 +267,7 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'runs/train/exp10/weights/best.pt', help='model path(s)')
     parser.add_argument('--source', type=str, default='', help='file/dir/URL/glob, 0 for webcam')
-
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
+    parser.add_argument("--imgsz", "--img", "--img-size", nargs="+", type=int, default=[640], help="inference size h,w")
     parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')

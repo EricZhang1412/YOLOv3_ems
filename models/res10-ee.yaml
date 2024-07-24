@@ -16,7 +16,6 @@ backbone:
    [-1, 1, ConcatBlock_ms, [256,3,2]],  # 5-P4/16
 
    [-1, 1, ConcatBlock_ms, [512,3,2]],  # 4-P5/32
-
   ]
 
 # YOLOv3-tiny head

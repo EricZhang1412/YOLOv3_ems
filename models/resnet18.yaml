@@ -17,7 +17,6 @@ backbone:
    [-1, 1, BasicBlock_2, [256, 3, 1]],
    [-1, 1, BasicBlock_2, [512, 3, 2]], #7 
    [-1, 1, BasicBlock_2, [512, 3, 1]],
- 
   ]
 
 # YOLOv3-tiny head

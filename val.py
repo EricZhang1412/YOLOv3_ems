@@ -177,7 +177,8 @@ def run(data,
         dt[0] += t2 - t1
 
         # Inference
-        out, train_out = model(im) if training else model(im, augment=augment, val=True)  # inference, loss outputs
+        # out, train_out = model(im) if training else model(im, augment=augment, val=True)  # inference, loss outputs
+        out, train_out = model(im) if training else model(im, augment=augment)  # inference, loss outputs
         dt[1] += time_sync() - t2
 
         # Loss
@@ -216,8 +217,8 @@ def run(data,
                 scale_coords(im[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
                 labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
-                if plots:
-                    confusion_matrix.process_batch(predn, labelsn)
+                # if plots:
+                #     confusion_matrix.process_batch(predn, labelsn)
             else:
                 correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
             stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))  # (correct, conf, pcls, tcls)
@@ -262,9 +263,9 @@ def run(data,
         LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {shape}' % t)
 
     # Plots
-    if plots:
-        confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
-        callbacks.run('on_val_end')
+    # if plots:
+    #     confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
+    #     callbacks.run('on_val_end')
 
     # Save JSON
     if save_json and len(jdict):
@@ -305,8 +306,8 @@ def run(data,
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default=ROOT / 'data/coco.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'runs/train/exp18/weights/best.pt', help='model.pt path(s)')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/nwpu.yaml', help='dataset.yaml path')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'runs/train/exp10/weights/best.pt', help='model.pt path(s)')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.001, help='confidence threshold')

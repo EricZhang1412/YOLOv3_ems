@@ -28,6 +28,7 @@ import sys
 import time
 from pathlib import Path
 
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.mobile_optimizer import optimize_for_mobile
@@ -47,7 +48,23 @@ from utils.general import (LOGGER, check_dataset, check_img_size, check_requirem
                            url2file)
 from utils.torch_utils import select_device
 
-
+def export_formats():
+    """Lists supported YOLOv3 model export formats including file suffixes and CPU/GPU compatibility."""
+    x = [
+        ["PyTorch", "-", ".pt", True, True],
+        ["TorchScript", "torchscript", ".torchscript", True, True],
+        ["ONNX", "onnx", ".onnx", True, True],
+        ["OpenVINO", "openvino", "_openvino_model", True, False],
+        ["TensorRT", "engine", ".engine", False, True],
+        ["CoreML", "coreml", ".mlmodel", True, False],
+        ["TensorFlow SavedModel", "saved_model", "_saved_model", True, True],
+        ["TensorFlow GraphDef", "pb", ".pb", True, True],
+        ["TensorFlow Lite", "tflite", ".tflite", True, False],
+        ["TensorFlow Edge TPU", "edgetpu", "_edgetpu.tflite", False, False],
+        ["TensorFlow.js", "tfjs", "_web_model", False, False],
+        ["PaddlePaddle", "paddle", "_paddle_model", True, True],
+    ]
+    return pd.DataFrame(x, columns=["Format", "Argument", "Suffix", "CPU", "GPU"])
 def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:')):
     #  TorchScript model export
     try:

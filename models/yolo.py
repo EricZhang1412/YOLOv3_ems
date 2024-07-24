@@ -30,7 +30,7 @@ try:
     import thop  # for FLOPs computation
 except ImportError:
     thop = None
-time_window= 3
+time_window= 2
 
 class Detect(nn.Module):
     stride = None  # strides computed during build
@@ -107,7 +107,7 @@ class Model(nn.Module):
             self.yaml['anchors'] = round(anchors)  # override yaml value
         self.model, self.save = parse_model(deepcopy(self.yaml), ch=[ch])  # model, savelist
         self.names = [str(i) for i in range(self.yaml['nc'])]  # default names
-        self.inplace = self.yaml.get('inplace', True)
+        self.inplace = False#self.yaml.get('inplace', False)
 
         # Build strides, anchors
         m = self.model[-1]  # Detect()
@@ -275,16 +275,20 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 pass
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
-                 BottleneckCSP, C3, C3TR, C3SPP, C3Ghost,Conv_2,snn_resnet,
-                 BasicBlock,BasicBlock_1,BasicBlock_2,Conv_A,CSABlock,LIAFBlock,Conv_LIAF,Bottleneck_2,
-                 TCSABlock,BasicTCSA,ConcatBlock_ms,BasicBlock_ms,Conv_1,Concat_res2,HAMBlock,ConcatCSA_res2,BasicBlock_ms1]:
+        # if m in [Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
+        #          BottleneckCSP, C3, C3TR, C3SPP, C3Ghost,Conv_2,snn_resnet,
+        #          BasicBlock,BasicBlock_1,BasicBlock_2,Conv_A,CSABlock,LIAFBlock,Conv_LIAF,Bottleneck_2,
+        #          TCSABlock,BasicTCSA,ConcatBlock_ms,BasicBlock_ms,Conv_1,Concat_res2,HAMBlock,ConcatCSA_res2,BasicBlock_ms1]:
+        if m in [Conv,
+                 Conv_2,
+                 BasicBlock,BasicBlock_1,BasicBlock_2,Conv_A,
+                 ConcatBlock_ms,BasicBlock_ms,Conv_1,Concat_res2]:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
 
             args = [c1, c2, *args[1:]]
-            if m in [BottleneckCSP, C3, C3TR, C3Ghost]:
+            if m in [BottleneckCSP, C3, C3TR]:
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is nn.BatchNorm2d:
